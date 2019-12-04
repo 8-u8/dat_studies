@@ -1,0 +1,27 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1573008084561.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2895934207",
+    "id" : "BB3216D1",
+    "lastKnownWriteTime" : 1573008529,
+    "last_content_update" : 1573008529686,
+    "path" : "~/Desktop/R_Lang_Challenge/ISM_LB_Proj/poisson_model.R",
+    "project_path" : "poisson_model.R",
+    "properties" : {
+        "cursorPosition" : "3,0",
+        "disableDependencyDiscovery" : "1",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

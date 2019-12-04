@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1573089983833.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3583238430",
+    "id" : "6AD6B221",
+    "lastKnownWriteTime" : 1573095522,
+    "last_content_update" : 1573095522225,
+    "path" : "~/Desktop/R_Lang_Challenge/ISM_LB_Proj/White_Noise_and_Random_Walk.R",
+    "project_path" : "White_Noise_and_Random_Walk.R",
+    "properties" : {
+        "cursorPosition" : "29,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled2"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 9,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

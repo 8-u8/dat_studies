@@ -1,0 +1,5 @@
+"0","plot(liklihood_value, type = ""b"")
+"
+"2"," plot(liklihood_value, type = ""b"") でエラー: 
+   オブジェクト 'liklihood_value' がありません 
+"

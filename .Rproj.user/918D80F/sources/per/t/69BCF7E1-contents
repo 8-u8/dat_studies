@@ -1,0 +1,193 @@
+---
+title: "LB1_day2_memo"
+author: "Kien Knot"
+date: "2019/11/7"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("リーディングDAT講座のソースコード/データ読み込み済.RData")
+library(KFAS)
+```
+
+## 2日目
+### 『状態空間モデルによる時系列解析 KFASによる実践モデリング』
+- データは[ここ](https://sites.google.com/site/shunichinomu/home/kalmanfilter)から誰でもDL可能。
+
+#### 時系列モデルとは  
+時系列は時間に依存して変化するデータ系列。いろいろなパターンがある。  
+
+- 連続か離散か。
+- 周期的な変化があるか、ないか
+- 定常的な時系列か、非定常な時系列か。
+
+代表的な時系列モデルにはいくつかあり
+
+- ホワイトノイズ
+  - 時系列$\eta_t$が独立同分布の正規分布($\mu$, $\sigma$)に従うノイズ。
+- ランダムウォーク
+- 自己回帰モデル
+  - 定常AR(1)モデル: 1時点前の値を用いて、パラメータ$\phi$の値が$-1 < \phi < 1$を満たす
+
+がある。 ホワイトノイズとランダムウォークは以下の実装で確認しよう。  
+なお、自己回帰モデルは`stats::arima()`などで推定できる。  
+(パラメータの推定をフルスクラッチで実装できたらいいのになあ)
+
+```{r echo = TRUE}
+set.seed(1234)
+
+# ホワイトノイズ
+eta <- rnorm(1000, mean = 0, sd = 1) # 普通に時系列する
+
+plot(eta, type = "l") # ガチャガチャしてる
+summary(eta)
+
+# ランダムウォーク
+rand_walk <- function(eta){
+  alpha    <- numeric(length(eta))
+  alpha[1] <- eta[1]
+  for(time in 2:length(eta)){
+    alpha[time] <- sum(eta[1:(time-1)])
+  }
+  return(alpha)
+}
+
+plot(rand_walk(eta), type = "l") # 確かに発散してそう。
+summary(rand_walk(eta))
+
+# 自己回帰・定常AR(1)モデル
+## パラメータ決め打ち
+AR_01_model <- function(eta, phi){
+  v    <- numeric(length(eta))
+  v[1] <- eta[1]
+  for(time in 2:length(eta)){
+    v[time] <- phi * v[time-1] + eta[time-1]
+  }
+  return(v)
+}
+
+plot(AR_01_model(eta, phi = 0.9), type = "l")
+summary(AR_01_model(eta, phi = 0.9)) # ランダムウォークよりなんかアレ
+```
+
+ホワイトノイズは完全にランダムっぽいが、ランダムウォークはなんか「意志」を感じる。  
+定常AR(1)モデルはホワイトノイズに近いけど、なんか規則性を感じる。
+
+#### 状態空間モデルとは  
+
+観測モデルと状態モデルに分ける。
+
+- 観測モデル
+  - ある確率分布から観測値を生成する
+- 状態モデル
+  - 観測モデルのパラメータの時間推移を表現する。
+  
+状態空間モデルの目的は「**状態**の推定・予測」にある。つまり、ある観測が得られた要因を推定し、要因の変化に基づいて将来の観測のアタリをつける。  
+メリットとして、観測可能なデータの増減の要因を複数に分解できる。  
+欠損値があってもある程度「どのへんに収まるか？」がわかる。  
+
+グラフィカルモデルで書くと、ハイパーパラメタから独立に状態モデルのパラメータが決まるのが階層ベイズのランダム効果モデルで、  
+ハイパーパラメタから得られる状態モデルの間に(ある方向での)依存関係があるのが状態空間モデル。  
+
+- 状態空間モデルと用語について(文脈の確認)
+  - フィルタ: 今**現在**の状態を知りたい場合
+    - カルマンフィルタによる推定を行う。
+  - 平滑化　: 今までの状態(=**過去**)の状態を知りたい
+    - 平滑化漸化式(カルマンスムーザ)
+  - 予測　　: **将来**の状態を知りたい
+    - 長期予測漸化式を用いる。
+    
+でも基本はカルマンフィルタ。カルマンフィルタはなんもわからん。  
+この講義では`KFAS`を用いる。なんか`dlm`とかもあるんですけど、`dlm`は正規線形状態空間モデルが使える一方  
+`KFAS`だと一般化線形状態空間モデルを扱える。強いとのこと。
+
+#### ローカルレベルモデル
+
+- 例: 野村先生の体重と体脂肪率
+  - まずは素直にデータを見てみよう
+  
+```{r echo = TRUE}
+
+library(KFAS) 
+
+# 体重データの読み込み（パス指定が必要。難しければ、データ読み込み済.RDataを起動すれば最初からデータが入っています）
+Weight <- ts(scan("リーディングDAT講座のソースコード/Weight.dat")) 
+
+plot(Weight, type = "o")
+
+```
+
+- なんか規則性ありそうだな。
+
+- カルマンフィルタで「現在の状態」を推定する。
+  - `KFAS::KFAS`で実行が可能らしい。
+
+- これがカルマンフィルタによる「現在の状態」の記述。
+  - 各時点の状態をその時点までの観測値から予測
+  - つまり時点30の状態は、時点30までの状態の結果から予測される。
+
+```{r echo = TRUE}
+# ローカルレベルモデルの定義
+mod <- SSModel(Weight ~ SSMtrend(1, Q = NA), H = NA)
+
+# 未知パラメータの推定
+fit <- fitSSM(mod, numeric(2), method = "BFGS")
+
+# カルマンフィルタ・カルマンスムーザの実行
+kfs <- KFS(fit$model)
+
+# フィルタ化推定量とその信頼区間
+afilt <- kfs$att
+Pfilt <- kfs$Ptt[,,]
+afiltupper <- afilt+sqrt(Pfilt)*qnorm(0.975)
+afiltlower <- afilt-sqrt(Pfilt)*qnorm(0.975)
+
+# スライド番号17の図の描画
+par(mar=c(3,3,1,1))
+par(mgp=c(2,.5,0))
+plot(Weight,type="o",lty=3,xlab="経過日数",ylab="体重（kg）",ylim=c(83,87))
+lines(afilt,lwd=2)
+lines(afiltupper)
+lines(afiltlower)
+```
+
+- カルマンスムーザは、各時点の状態を、期間すべての観測値から推定する。
+
+```{r echo = TRUE}
+# 平滑化状態の信頼区間
+alphahatconf <- predict(fit$model, interval = "confidence", level = 0.95)
+
+# スライド番号18の図の描画
+plot(Weight,type="o",lty=3,xlab="経過日数",ylab="体重（kg）",ylim=c(83,87))
+lines(alphahatconf[,1],lwd=2)
+lines(alphahatconf[,2])
+lines(alphahatconf[,3])
+
+```
+
+- 予測。
+  - みんな大好き`predict`でOK。
+
+```{r echo =TRUE}
+# 長期予測
+mod50 <- SSModel(Weight[1:50] ~ SSMtrend(1, Q = NA), H = NA)
+fit50 <- fitSSM(mod50, numeric(2), method = "BFGS")
+conf50 <- predict(fit50$model, interval ="confidence", n.ahead = 10)
+pre50  <- predict(fit50$model, interval ="prediction", n.ahead = 10)
+
+# スライド番号20の図の描画
+plot(Weight,type="o",lty=3,xlab="経過日数",ylab="体重（kg）",ylim=c(83,87))
+lines(51:60,Weight[51:60],type="o",lty=3,col=8)
+lines(51:60,conf50[,1],lwd=2)
+lines(51:60,conf50[,2])
+lines(51:60,conf50[,3])
+lines(51:60,pre50[,2],lty=2)
+lines(51:60,pre50[,3],lty=2)
+```
+
+- 欠損値補完は省略。
+
+#### 平滑化トレンドモデル
+#### 構造時系列モデル
+#### 非ガウスモデル

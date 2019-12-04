@@ -1,0 +1,1 @@
+{"frames":[{"character_number":0,"end_character_number":0,"end_line_number":0,"file":"","func":"plot(liklihood_value, type = \"b\")","line_number":0}],"message":" plot(liklihood_value, type = \"b\") でエラー: \n   オブジェクト 'liklihood_value' がありません \n"}
